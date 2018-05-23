@@ -1,0 +1,220 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html style="width: 100%;height: 100%;">
+    <head>
+		<script src="../js/three.js"></script>
+		<script src="../js/loaders/STLLoader.js"></script>
+		<script src="../js/loaders/MTLLoader.js"></script>
+		<script src="../js/loaders/OBJLoader.js"></script>
+		<script src="../js/controls/TrackballControls.js"></script>
+		<meta charset="UTF-8">
+		<title></title>
+		<style>
+			*{margin: 0px;padding: 0px;}
+		</style>
+	</head>
+	<body style="width: 100%;height: 100%;">	
+		<div id="all" style="display: flex;justify-content: space-between;width: 100%;height: 100%">
+			<div id="design" style="width: 100%;height: 100%;" ></div>   							
+		</div>
+	</body>
+	<script type="x-shader/x-vertex" id="vertexShader">
+        varying vec3 worldPosition;
+        void main() {
+            vec4 mPosition = modelMatrix * vec4( position, 1.0 );
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            worldPosition = mPosition.xyz;
+        }
+   </script>
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        uniform vec3 topColor;
+        uniform vec3 bottomColor;
+        uniform float offset;
+        uniform float exponent;
+        varying vec3 worldPosition;
+        void main() {
+            float h = normalize( worldPosition + offset ).y;
+            gl_FragColor = vec4( mix( bottomColor, topColor, max( pow( h, exponent ), 0.0 ) ), 1.0 );
+        }
+    </script>
+    <script type="text/javascript">  
+    	var design,renderer,scene,camera,control,gridHelper,light0,light1,light2,light3,controls;
+    	
+    	init();
+    	animate();
+    	
+    	function init() {
+		
+		design = document.getElementById('design');
+		
+		//renderer		        	
+		renderer = new THREE.WebGLRenderer({ antialias: true });
+		renderer.setPixelRatio( window.devicePixelRatio );
+		renderer.setSize( design.clientWidth, design.clientHeight );
+		renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+        renderer.gammaInput = true;
+        renderer.gammaOutput = true;
+        renderer.shadowMap.enabled = true;
+		design.appendChild( renderer.domElement );
+        //renderer
+        
+		//scene
+        scene = new THREE.Scene();           
+        //scene
+        
+        //camera
+		camera = new THREE.PerspectiveCamera( 70,design.clientWidth / design.clientHeight, 1, 10000 );
+		camera.position.set( 0, 100, 100);
+		camera.lookAt( new THREE.Vector3( 0, 0 ,0) );
+		scene.add(camera);
+		//camera	
+		
+        //gridHelper
+        gridHelper = new THREE.GridHelper( 100, 10);
+        scene.add( gridHelper );
+        //gridHelper
+        
+        // add hemi lights
+        var hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.05 );
+        hemiLight.color.setHSL( 0.6, 1, 0.6 );
+        hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
+        hemiLight.position.set( 10000, 10000, 10000 );
+        scene.add( hemiLight );
+        
+		//light
+//		light0 = new THREE.DirectionalLight( 0xffffff, 2 );
+//		light0.position.set( 400, 400, 400 );
+//		scene.add( light0 );
+		//light         
+        
+		//controls
+		controls = new THREE.TrackballControls( camera,design );
+		controls.rotateSpeed = 2.0;
+		controls.zoomSpeed = 1.2;
+		controls.panSpeed = 0.8;
+		controls.noZoom = false;
+		controls.noPan = false;
+		controls.staticMoving = true;
+		controls.dynamicDampingFactor = 0.3;
+        //controls      
+        
+        // this is the Sun
+        dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+        dirLight.color.setHSL( 0.1, 1, 0.95 );
+        dirLight.position.set(0, 0.75, 1 );
+        dirLight.position.multiplyScalar( 50 );
+        //scene.add( dirLight );
+        // dirLight.shadowCameraVisible = true;
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = dirLight.shadow.mapSize.height = 1024*4;
+        var d = 30;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        // the magic is here - this needs to be tweaked if you change dimensions
+        dirLight.shadow.camera.far = 35000;
+        dirLight.shadow.bias = -0.000001;
+        //dirLight.shadowDarkness = 0.35;
+        scene.add( dirLight );
+        
+        //scene.fog = new THREE.Fog(0x222233, 0, 20000);
+        //renderer.setClearColor( scene.fog.color, 1 );
+        
+        // add skydome
+        var vertexShader = document.getElementById( 'vertexShader' ).textContent;
+        var fragmentShader = document.getElementById( 'fragmentShader' ).textContent;
+        var uniforms = {
+            topColor:    { type: "c", value: new THREE.Color( 0x0077ff ) },
+            bottomColor: { type: "c", value: new THREE.Color( 0xffffff ) },
+            offset:      { type: "f", value: 33 },
+            exponent:    { type: "f", value: 0.6 }
+        }
+        uniforms.topColor.value.copy( hemiLight.color );
+        //scene.fog.color.copy( uniforms.bottomColor.value );
+        var skyGeo = new THREE.SphereGeometry( 4000, 32, 15 );
+        var skyMat = new THREE.ShaderMaterial( { vertexShader: vertexShader, fragmentShader: fragmentShader, uniforms: uniforms, side: THREE.BackSide } );
+        var sky = new THREE.Mesh( skyGeo, skyMat );
+        scene.add( sky );
+		
+		//mousecontrol 
+        design.addEventListener( 'resize', onWindowResize, false );
+        design.addEventListener( 'mousedown', onDocumentMouseDown, false );
+		design.addEventListener( 'mouseup', onDocumentMouseUp, false );
+        //mousecontrol   
+        
+        // add ground
+        var groundGeo = new THREE.PlaneBufferGeometry( 100, 100 );
+        var groundMat = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x050505 } );
+        groundMat.color.setHSL( 0.095, 1, 0.75 );
+        ground = new THREE.Mesh( groundGeo, groundMat );
+        ground.rotation.x = -Math.PI/2;
+        scene.add( ground );
+        ground.receiveShadow = true;
+        
+        var geometry1 = new THREE.BoxGeometry( 1, 4, 1 );
+        var material1 = new THREE.MeshLambertMaterial( { color: 0xFF0000 } );
+        var mesh1 = new THREE.Mesh( geometry1, material1 );
+        mesh1.position.y = 2
+        mesh1.castShadow = true;
+        mesh1.receiveShadow = true;
+        scene.add( mesh1 );
+        
+    		var geometry2 = new THREE.BoxGeometry( 20, 1, 20 );
+        var material2 = new THREE.MeshLambertMaterial( { color: 0x0000FF } );
+        var mesh2 = new THREE.Mesh( geometry2, material2 );
+        mesh2.castShadow = true;
+        mesh2.receiveShadow = true;
+        mesh2.position.y = 4
+        mesh2.position.z = -6
+        scene.add( mesh2 );
+        
+//      	var mtlLoader = new THREE.MTLLoader();
+//			mtlLoader.load( "../models/all.mtl", function( materials ) {
+//				materials.preload();
+//				var objLoader = new THREE.OBJLoader();
+//				objLoader.setMaterials( materials );
+//				objLoader.load( "../models/all.obj", function ( object ) {	
+//					scene.add( object );
+//				}, onProgress, onError );
+//			});
+
+
+//			var objLoader = new THREE.OBJLoader();
+//			objLoader.load( "../models/all2.obj", function ( object ) {	
+//				scene.add( object );
+//			}, onProgress, onError );
+        
+		render();
+	}
+    	
+    	var onProgress = function ( xhr ) {	};
+
+	var onError = function ( xhr ) { };
+	
+    function onDocumentMouseUp( event ) { 
+    	
+		}
+    
+    function onDocumentMouseDown( event ) {  
+    		console.log("onDocumentMouseDown",dirLight.position);
+    		dirLight.position.set( 0, 200, 600);
+    }
+    
+    function onWindowResize() {
+		camera.aspect = design.innerWidth / design.innerHeight;
+		camera.updateProjectionMatrix();	
+		renderer.setSize( design.innerWidth, design.innerHeight );	
+		render();	
+	}
+    
+    function animate() {
+		requestAnimationFrame( animate );
+		render();
+	}
+    
+    function render() {
+    		controls.update();
+		renderer.render( scene, camera );
+	}
+    </script>
+</html>

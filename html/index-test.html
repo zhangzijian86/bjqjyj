@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html style="width: 100%;height: 100%;">
+    <head>
+		<script src="../js/three.js"></script>
+		<script src="../js/loaders/STLLoader.js"></script>
+		<script src="../js/loaders/MTLLoader.js"></script>
+		<script src="../js/loaders/OBJLoader.js"></script>
+		<script src="../js/controls/TrackballControls.js"></script>
+		<meta charset="UTF-8">
+		<title></title>
+		<style>
+			*{margin: 0px;padding: 0px;}
+		</style>
+	</head>
+	<body style="width: 100%;height: 100%;">	
+		<div id="all" style="display: flex;justify-content: space-between;width: 100%;height: 100%">
+			<div id="design" style="width: 100%;height: 100%;" ></div>   							
+		</div>
+	</body>
+    <script type="text/javascript">  
+    	var design,renderer,scene,camera,control,gridHelper,light0,light1,light2,light3,controls;
+    	var tmpobj;
+    	init();
+    	animate();
+    	
+    	function init() {
+    		
+			design = document.getElementById('design');
+    		
+			//renderer		        	
+			renderer = new THREE.WebGLRenderer();
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( design.clientWidth, design.clientHeight );
+			renderer.sortObjects = false;
+			renderer.setClearColor( 0x000000 );
+			design.appendChild( renderer.domElement );
+	        //renderer
+	        
+    			//scene
+	        scene = new THREE.Scene();           
+	        //scene
+	        
+            //camera
+            camera = new THREE.PerspectiveCamera( 70,design.clientWidth / design.clientHeight, 1, 3000 );
+			camera.position.set( 0, 200, 200);
+			camera.lookAt( new THREE.Vector3( 0, 0 ,0) );
+			scene.add(camera);
+			//camera	
+			
+	        //gridHelper
+	        gridHelper = new THREE.GridHelper( 100, 10);
+	        scene.add( gridHelper );
+	        //gridHelper
+	        
+			//light
+			light0 = new THREE.DirectionalLight( 0xffffff, 2 );
+			light0.position.set( 400, 400, 400 );
+			scene.add( light0 );
+			
+			light1 = new THREE.DirectionalLight( 0xffffff, 2 );
+			light1.position.set( -400, -400, -400 );
+			scene.add( light1 );
+			//light         
+	        
+			//controls
+    		controls = new THREE.TrackballControls( camera,design );
+			controls.rotateSpeed = 2.0;
+			controls.zoomSpeed = 1.2;
+			controls.panSpeed = 0.8;
+			controls.noZoom = false;
+			controls.noPan = false;
+			controls.staticMoving = true;
+			controls.dynamicDampingFactor = 0.3;
+	        //controls      
+			
+			//mousecontrol 
+	        design.addEventListener( 'resize', onWindowResize, false );
+	        design.addEventListener( 'mousedown', onDocumentMouseDown, false );
+			design.addEventListener( 'mouseup', onDocumentMouseUp, false );
+	        //mousecontrol   
+	        
+        	var mtlLoader = new THREE.MTLLoader();
+			mtlLoader.load( "../models/waiqiang/wq0.mtl", function( materials ) {
+				materials.preload();
+				var objLoader = new THREE.OBJLoader();
+				objLoader.setMaterials( materials );
+				objLoader.load( "../models/waiqiang/wq0.obj", function ( object ) {	
+					scene.add( object );
+				}, onProgress, onError );
+			});
+
+
+//			var material = new THREE.MeshLambertMaterial( { color: 0x012028 ,transparent: true,opacity: 0.8 } ); 			
+//			var loader = new THREE.STLLoader(); 			
+//			loader.load( "../models/zz.stl", function ( geometry) { 
+//				var mesh = new THREE.Mesh(geometry, material); 
+//				mesh.rotation.x = -Math.PI / 2;
+//				scene.add( mesh ); 
+//			} );
+//
+//			var objLoader = new THREE.OBJLoader();
+//			objLoader.load( "../models/zz.obj", function ( object ) {				
+//				for(k in object.children){  
+//					var material1 = new THREE.MeshLambertMaterial( { color: 0x00ff00 ,transparent: true,opacity: 0.2 } );
+//		        	object.children[k].material = material1;
+//				}
+//				tmpobj = object;
+//				scene.add( object );
+//			}, onProgress, onError );
+	        
+			render();
+    	}
+    	
+    	var onProgress = function ( xhr ) {	};
+
+		var onError = function ( xhr ) { };
+    	
+        function onDocumentMouseUp( event ) { 
+        	
+    		}
+        
+        function onDocumentMouseDown( event ) {  
+//      	console.log("==onDocumentMouseDown==",tmpobj.children.length);
+//      	for(i=0;i<tmpobj.children.length;i++){
+//				var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+//				var material0 = new THREE.MeshLambertMaterial( { color: 0xff0000 } );
+//				mesh = new THREE.Mesh( geometry, material0 );
+//				mesh.name="mesh00000";
+//				mesh.position.x = tmpobj.children[i].geometry.boundingSphere.center.x;
+//				mesh.position.y = tmpobj.children[i].geometry.boundingSphere.center.y;
+//				mesh.position.z = tmpobj.children[i].geometry.boundingSphere.center.z;
+//				scene.add( mesh );
+//      	}
+        }
+        	
+        
+	    function onWindowResize() {
+			camera.aspect = design.innerWidth / design.innerHeight;
+			camera.updateProjectionMatrix();	
+			renderer.setSize( design.innerWidth, design.innerHeight );	
+			render();	
+		}
+        
+        function animate() {
+			requestAnimationFrame( animate );
+			render();
+		}
+	    
+	    function render() {
+	    		controls.update();
+			renderer.render( scene, camera );
+		}
+    </script>
+</html>

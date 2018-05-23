@@ -1,0 +1,497 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html style="width: 100%;height: 100%;">
+    <head>
+		<script src="../js/three.js"></script>
+		<script src="../js/loaders/STLLoader.js"></script>
+		<script src="../js/loaders/MTLLoader.js"></script>
+		<script src="../js/loaders/OBJLoader.js"></script>
+		<script src="../js/controls/TrackballControls.js"></script>
+		<meta charset="UTF-8">
+		<title></title>
+		<style>
+			*{margin: 0px;padding: 0px;}
+		</style>
+	</head>
+	<body style="width: 100%;height: 100%;">	
+		<div id="all" style="display: flex;justify-content: space-between;width: 100%;height: 100%">
+			<div id="design" style="width: 100%;height: 100%;" ></div>   							
+		</div>
+	</body>
+	<script type="x-shader/x-vertex" id="vertexShader">
+        varying vec3 worldPosition;
+        void main() {
+            vec4 mPosition = modelMatrix * vec4( position, 1.0 );
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            worldPosition = mPosition.xyz;
+        }
+   </script>
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        uniform vec3 topColor;
+        uniform vec3 bottomColor;
+        uniform float offset;
+        uniform float exponent;
+        varying vec3 worldPosition;
+        void main() {
+            float h = normalize( worldPosition + offset ).y;
+            gl_FragColor = vec4( mix( bottomColor, topColor, max( pow( h, exponent ), 0.0 ) ), 1.0 );
+        }
+    </script>
+    <script type="text/javascript">  
+    var camera, scene, renderer, dirLight, hemiLight,controls;
+    	
+    	init();
+    	animate();
+    	
+    	function init() {
+		
+		design = document.getElementById('design');
+		
+		camera = new THREE.PerspectiveCamera( 30, design.clientWidth / design.clientHeight, 1, 5000 );
+		camera.position.set( 0, 200, 200);
+		camera.lookAt( new THREE.Vector3( 0, 0 ,0) );
+
+		scene = new THREE.Scene();
+		scene.fog = new THREE.Fog( 0xffffff, 1, 5000 );
+		scene.fog.color.setHSL( 0.6, 0, 1 );
+		
+        //gridHelper
+        gridHelper = new THREE.GridHelper( 100, 10);
+        scene.add( gridHelper );
+        //gridHelper
+
+		// LIGHTS
+		hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
+		hemiLight.color.setHSL( 0.6, 1, 0.6 );
+		hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
+		hemiLight.position.set( 0, 500, 0 );
+		scene.add( hemiLight );
+
+		dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+		dirLight.color.setHSL( 0.1, 1, 0.95 );
+		dirLight.position.set( -1, 1.75, 1 );
+		dirLight.position.multiplyScalar( 50 );
+		scene.add( dirLight );
+		dirLight.castShadow = true;
+		dirLight.shadow.mapSize.width = 2048;
+		dirLight.shadow.mapSize.height = 2048;
+		var d = 50;
+		dirLight.shadow.camera.left = -d;
+		dirLight.shadow.camera.right = d;
+		dirLight.shadow.camera.top = d;
+		dirLight.shadow.camera.bottom = -d;
+		dirLight.shadow.camera.far = 3500;
+		dirLight.shadow.bias = -0.0001;
+
+		// GROUND
+		var groundGeo = new THREE.PlaneBufferGeometry( 10000, 10000 );
+		var groundMat = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x050505 } );
+		groundMat.color.setHSL( 0.095, 1, 0.75 );
+		var ground = new THREE.Mesh( groundGeo, groundMat );
+		ground.rotation.x = -Math.PI/2;
+		ground.position.y = 0;
+		scene.add( ground );
+		ground.receiveShadow = true;
+		
+		// add ground
+        var groundGeo = new THREE.PlaneBufferGeometry( 100, 100 );
+        var groundMat = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x050505 } );
+        groundMat.color.setHSL( 0.095, 1, 0.75 );
+        ground = new THREE.Mesh( groundGeo, groundMat );
+        ground.rotation.x = -Math.PI/2;
+        scene.add( ground );
+        ground.receiveShadow = true;
+
+		// SKYDOME
+		var vertexShader = document.getElementById( 'vertexShader' ).textContent;
+		var fragmentShader = document.getElementById( 'fragmentShader' ).textContent;
+		var uniforms = {
+			topColor:    { value: new THREE.Color( 0x0077ff ) },
+			bottomColor: { value: new THREE.Color( 0xffffff ) },
+			offset:      { value: 33 },
+			exponent:    { value: 0.6 }
+		};
+		uniforms.topColor.value.copy( hemiLight.color );
+		scene.fog.color.copy( uniforms.bottomColor.value );
+		var skyGeo = new THREE.SphereGeometry( 4000, 32, 15 );
+		var skyMat = new THREE.ShaderMaterial( { vertexShader: vertexShader, fragmentShader: fragmentShader, uniforms: uniforms, side: THREE.BackSide } );
+		var sky = new THREE.Mesh( skyGeo, skyMat );
+		scene.add( sky );
+
+		//controls
+		controls = new THREE.TrackballControls( camera,design );
+		controls.rotateSpeed = 2.0;
+		controls.zoomSpeed = 1.2;
+		controls.panSpeed = 0.8;
+		controls.noZoom = false;
+		controls.noPan = false;
+		controls.staticMoving = true;
+		controls.dynamicDampingFactor = 0.3;
+        //controls      
+
+		renderer = new THREE.WebGLRenderer( { antialias: true } );
+		renderer.setClearColor( scene.fog.color );
+		renderer.setPixelRatio( window.devicePixelRatio );
+		renderer.setSize( design.clientWidth, design.clientHeight );
+		design.appendChild( renderer.domElement );
+		renderer.gammaInput = true;
+		renderer.gammaOutput = true;
+		renderer.shadowMap.enabled = true;
+		renderer.shadowMap.renderReverseSided = false;
+		
+		window.addEventListener( 'resize', onWindowResize, false );
+		window.addEventListener( 'mousedown', onDocumentMouseDown, false );
+		
+//		var geometry2 = new THREE.BoxGeometry( 20, 1, 20 );
+//      var material2 = new THREE.MeshLambertMaterial( { color: 0x0000FF } );
+//      var mesh2 = new THREE.Mesh( geometry2, material2 );
+//      mesh2.castShadow = true;
+//      mesh2.receiveShadow = true;
+//      mesh2.position.y = 4
+//      mesh2.position.z = -6
+//      scene.add( mesh2 );
+		
+        //initWa();
+        //iniGeduan();
+        //initCeng();
+        initChuang();
+        initLanxian();
+        initLvxian();
+        //initNverqiang();
+        //initZheguang();
+        //initQita();
+        initWaiqiang();
+        
+		render();
+	}
+    	
+	function initWa(){
+		var wa=new Array(
+			["../models/wa/wa0.mtl","../models/wa/wa0.obj"],
+			["../models/wa/wa1.mtl","../models/wa/wa1.obj"],
+			["../models/wa/wa2.mtl","../models/wa/wa2.obj"],
+			["../models/wa/waneihei.mtl","../models/wa/waneihei.obj"]
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function initCeng(){
+		var wa=new Array(
+			["../models/ceng/cengd0.mtl","../models/ceng/cengd0.obj"],
+			["../models/ceng/cengd0jb.mtl","../models/ceng/cengd0jb.obj"],
+			["../models/ceng/ceng1c.mtl","../models/ceng/ceng1c.obj"],
+			["../models/ceng/ceng1ctj.mtl","../models/ceng/ceng1ctj.obj"],
+			["../models/ceng/ceng2c.mtl","../models/ceng/ceng2c.obj"],
+			["../models/ceng/ceng2cjb.mtl","../models/ceng/ceng2cjb.obj"],
+			["../models/ceng/ceng3c.mtl","../models/ceng/ceng3c.obj"],
+			["../models/ceng/ceng3cjb.mtl","../models/ceng/ceng3cjb.obj"]
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function iniGeduan(){
+		var wa=new Array(
+			["../models/geduan/gd1.mtl","../models/geduan/gd1.obj"],
+			["../models/geduan/gd2.mtl","../models/geduan/gd2.obj"],
+			["../models/geduan/gd3.mtl","../models/geduan/gd3.obj"]
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function initChuang(){
+		var wa=new Array(
+			["../models/chuang/chuang0.mtl","../models/chuang/chuang0.obj"],
+			["../models/chuang/chuang1.mtl","../models/chuang/chuang1.obj"],
+			["../models/chuang/chuang2.mtl","../models/chuang/chuang2.obj"],
+			["../models/chuang/chuang3.mtl","../models/chuang/chuang3.obj"],
+			["../models/chuang/chuang4.mtl","../models/chuang/chuang4.obj"],
+			["../models/chuang/chuang5.mtl","../models/chuang/chuang5.obj"],
+			["../models/chuang/chuang6.mtl","../models/chuang/chuang6.obj"],
+			["../models/chuang/chuang7.mtl","../models/chuang/chuang7.obj"],
+			["../models/chuang/chuang8.mtl","../models/chuang/chuang8.obj"],
+			["../models/chuang/chuang9.mtl","../models/chuang/chuang9.obj"],
+			["../models/chuang/chuang10.mtl","../models/chuang/chuang10.obj"],
+			["../models/chuang/chuang11.mtl","../models/chuang/chuang11.obj"],
+			["../models/chuang/chuang12.mtl","../models/chuang/chuang12.obj"],
+			["../models/chuang/chuang13.mtl","../models/chuang/chuang13.obj"],
+			["../models/chuang/chuang14.mtl","../models/chuang/chuang14.obj"],
+			["../models/chuang/chuangh1.mtl","../models/chuang/chuangh1.obj"],
+			["../models/chuang/chuangh2.mtl","../models/chuang/chuangh2.obj"],
+			["../models/chuang/chuangh3.mtl","../models/chuang/chuangh3.obj"],
+			["../models/chuang/chuangh4.mtl","../models/chuang/chuangh4.obj"],
+			["../models/chuang/chuangh5.mtl","../models/chuang/chuangh5.obj"],
+			["../models/chuang/chuangh6.mtl","../models/chuang/chuangh6.obj"],
+			["../models/chuang/chuangh7.mtl","../models/chuang/chuangh7.obj"],
+			["../models/chuang/chuangh8.mtl","../models/chuang/chuangh8.obj"],
+			["../models/chuang/chuangh9.mtl","../models/chuang/chuangh9.obj"],
+			["../models/chuang/chuangh10.mtl","../models/chuang/chuangh10.obj"],
+			["../models/chuang/chuangh11.mtl","../models/chuang/chuangh11.obj"],
+			["../models/chuang/chuangh12.mtl","../models/chuang/chuangh12.obj"],
+			["../models/chuang/chuangh13.mtl","../models/chuang/chuangh13.obj"],
+			["../models/chuang/chuangqita.mtl","../models/chuang/chuangqita.obj"]
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function initLanxian(){
+		var wa=new Array(
+			["../models/lanxian/lanxian0.mtl","../models/lanxian/lanxian0.obj"],
+			["../models/lanxian/lanxian1.mtl","../models/lanxian/lanxian1.obj"],
+			["../models/lanxian/lanxian2.mtl","../models/lanxian/lanxian2.obj"],
+			["../models/lanxian/lanxian3.mtl","../models/lanxian/lanxian3.obj"],
+			["../models/lanxian/lanxian4.mtl","../models/lanxian/lanxian4.obj"]
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function initLvxian(){
+		var wa=new Array(
+			["../models/lvxian/lx0.mtl","../models/lvxian/lx0.obj"],
+			["../models/lvxian/lx1.mtl","../models/lvxian/lx1.obj"],
+			["../models/lvxian/lx2.mtl","../models/lvxian/lx2.obj"],
+			["../models/lvxian/lx3.mtl","../models/lvxian/lx3.obj"],
+			["../models/lvxian/lx4.mtl","../models/lvxian/lx4.obj"]
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function initNverqiang(){
+		var wa=new Array(
+			["../models/nverqiang/neq0.mtl","../models/nverqiang/neq0.obj"],
+			["../models/nverqiang/neq1.mtl","../models/nverqiang/neq1.obj"]
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function initZheguang(){
+		var wa=new Array(
+			["../models/zheguang/zgd0.mtl","../models/zheguang/zgd0.obj"],
+			["../models/zheguang/zgd1.mtl","../models/zheguang/zgd1.obj"],
+			["../models/zheguang/zgd2.mtl","../models/zheguang/zgd2.obj"],
+			["../models/zheguang/zgd3hou.mtl","../models/zheguang/zgd3hou.obj"],
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function initWaiqiang(){
+		var wa=new Array(
+			["../models/waiqiang/wq0.mtl","../models/waiqiang/wq0.obj"],
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+	
+	function initQita(){
+		var wa=new Array(
+			["../models/chuqikou.mtl","../models/chuqikou.obj"],
+			["../models/fengkou.mtl","../models/fengkou.obj"],
+			["../models/fengkouquan.mtl","../models/fengkouquan.obj"],
+			["../models/houchuangkuang.mtl","../models/houchuangkuang.obj"],
+			["../models/juanlianmen.mtl","../models/juanlianmen.obj"],
+			["../models/men.mtl","../models/men.obj"],
+			["../models/menshang.mtl","../models/menshang.obj"],
+			["../models/qianchuangkuangall.mtl","../models/qianchuangkuangall.obj"],
+			["../models/shuichi.mtl","../models/shuichi.obj"],
+			["../models/waimen.mtl","../models/waimen.obj"],
+			["../models/zhuzi.mtl","../models/zhuzi.obj"]
+		);
+		var i = 0;
+		for(i=0;i<wa.length;i++){
+			(function(mtltmp,objtmp){
+	        	var mtlLoader = new THREE.MTLLoader();
+				mtlLoader.load( mtltmp, function( materials ) {
+					materials.preload();
+					var objLoader = new THREE.OBJLoader();
+					objLoader.setMaterials( materials );
+					objLoader.load( objtmp, function ( object ) {	
+//						 for(k in object.children){  
+//				             object.children[k].castShadow = true;  
+//				             object.children[k].receiveShadow = true;  
+//				         }  
+						scene.add( object );
+					}, onProgress, onError );
+				});
+			})(wa[i][0],wa[i][1]);
+		}
+	}
+    	
+	var onProgress = function ( xhr ) {	};
+
+	var onError = function ( xhr ) { };
+	
+    function onDocumentMouseUp( event ) { 
+    	
+		}
+    
+    function onDocumentMouseDown( event ) {  
+    }
+    
+    function onWindowResize() {
+		camera.aspect = design.innerWidth / design.innerHeight;
+		camera.updateProjectionMatrix();	
+		renderer.setSize( design.innerWidth, design.innerHeight );	
+		render();	
+	}
+    
+    function animate() {
+		requestAnimationFrame( animate );
+		render();
+	}
+    
+    function render() {
+    		controls.update();
+		renderer.render( scene, camera );
+	}
+    </script>
+</html>
