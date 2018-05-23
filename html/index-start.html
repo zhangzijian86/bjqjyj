@@ -153,15 +153,16 @@
 		
 		stlmaterial = new THREE.MeshLambertMaterial( { color: 0x012028 ,transparent: true,opacity: 0.5 } );
 		
-		initStlQita();
-		initStlZheguang();
-		initStlNverqiang();
-		initStlLvxian();
-		initStlLanxian();
-		iniStlGeduan();
-		initStlWa();
-		initStlCeng();
-		initStlChuang();
+//		initStlWaiqiang();
+//		initStlQita();
+//		initStlZheguang();
+//		initStlNverqiang();
+//		initStlLvxian();
+//		initStlLanxian();
+//		iniStlGeduan();
+//		initStlWa();
+//		initStlCeng();
+//		initStlChuang();
 		
 		
 		
@@ -174,11 +175,59 @@
 //      initLvxian();
 //      initNverqiang();
 //      initZheguang();
-//      initWaiqiang();
+        initWaiqiang();
 //      initQita();
         
 		render();
 	}
+    	
+    	function initStlWaiqiang(){
+    		var tmparray=new Array(
+			"../stlmodels/waiqiang/wq0.stl",
+			"../stlmodels/waiqiang/wq1.stl",
+			"../stlmodels/waiqiang/wq2.stl",
+			"../stlmodels/waiqiang/wq3.stl",
+			"../stlmodels/waiqiang/wq4.stl",
+			"../stlmodels/waiqiang/wq5.stl",
+			"../stlmodels/waiqiang/wq6.stl",
+			"../stlmodels/waiqiang/wq7.stl",
+			"../stlmodels/waiqiang/wq8.stl",
+			"../stlmodels/waiqiang/wq9.stl",
+			"../stlmodels/waiqiang/wq10.stl",
+			"../stlmodels/waiqiang/wq11.stl",
+			"../stlmodels/waiqiang/wq12.stl",
+			"../stlmodels/waiqiang/wq13.stl",
+			"../stlmodels/waiqiang/wq14.stl",
+			"../stlmodels/waiqiang/wq15.stl",
+			"../stlmodels/waiqiang/wqz16.stl",
+			"../stlmodels/waiqiang/wqz17.stl",
+			"../stlmodels/waiqiang/wqz18.stl",
+			"../stlmodels/waiqiang/wqj19.stl",
+			"../stlmodels/waiqiang/wqj20.stl",
+			"../stlmodels/waiqiang/wq21.stl",
+			"../stlmodels/waiqiang/wq22.stl",
+//			"../stlmodels/waiqiang/wq23.stl",
+		);
+		var i = 0;
+		for(i=0;i<tmparray.length;i++){
+			var loader = new THREE.STLLoader();
+			(function(datatmp){
+				loader.load( datatmp, function ( geometry ) {				
+					var mesh = new THREE.Mesh( geometry, stlmaterial );
+					mesh.rotation.x = -Math.PI/2;
+					mesh.name = datatmp;
+					scene.add( mesh );						
+//					objects_zt.push(mesh);
+					var geo = new THREE.EdgesGeometry(geometry); 
+					var mat = new THREE.LineBasicMaterial( { color: 0x0A86A2, linewidth: 2 } );
+					var wireframe = new THREE.LineSegments( geo, mat );
+					wireframe.rotation.x = -Math.PI/2;
+//					objects_ztx.push(wireframe);
+					scene.add( wireframe );
+				} );
+			})(tmparray[i]);
+		}
+    	}
     	
     	function initStlQita(){
 		var tmparray=new Array(
@@ -735,7 +784,7 @@
 			["../models/waiqiang/wqj20.mtl","../models/waiqiang/wqj20.obj"],
 			["../models/waiqiang/wq21.mtl","../models/waiqiang/wq21.obj"],
 			["../models/waiqiang/wq22.mtl","../models/waiqiang/wq22.obj"],
-			["../models/waiqiang/wq23.mtl","../models/waiqiang/wq23.obj"],
+//			["../models/waiqiang/wq23.mtl","../models/waiqiang/wq23.obj"],
 		);
 		var i = 0;
 		for(i=0;i<wa.length;i++){
