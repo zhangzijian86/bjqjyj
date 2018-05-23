@@ -12,5 +12,5 @@ newmtl Material__2100436821
 	Kd 0.5880 0.5880 0.5880
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka -s 0.6000 0.6000 1.0000 Brick19-1.jpg
-	map_Kd -s 0.6000 0.6000 1.0000 Brick19-1.jpg
+	map_Ka -s 0.6000 0.6000 1.0000 ../image/models/Brick19-1.jpg
+	map_Kd -s 0.6000 0.6000 1.0000 ../image/models/Brick19-1.jpg
